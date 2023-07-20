@@ -25,6 +25,7 @@
     "typechain": "^8.1.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.9.2"
+    "@openzeppelin/contracts": "^4.9.2",
+    "fs": "^0.0.1-security"
   }
 }
