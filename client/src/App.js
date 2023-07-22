@@ -12,12 +12,22 @@ const App = () => {
   const [account, setAccount] = useState(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [message, setMessage] = useState("");
   const [image, setImage] = useState(null);
   const [url, setURL] = useState(null);
+  const [nft, setNFT] = useState(null);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   const loadBlockchainData = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     setProvider(provider);
+    const network = await provider.getNetwork();
+    const nftAddress =
+      network.chainId in contractAddresses
+        ? contractAddresses[network.chainId][0]
+        : null;
+    const NFT = new ethers.Contract(nftAddress, abi, provider);
+    setNFT(NFT);
   };
 
   useEffect(() => {
@@ -26,18 +36,22 @@ const App = () => {
 
   const submitHandler = async (e) => {
     e.preventDefault();
-
+    setIsWaiting(true);
     // Call AI API to generate a image based on description
     const imageData = await createImage();
 
     // Upload image to IPFS (NFT.Storage)
     const imgurl = await uploadImage(imageData);
 
-    console.log("Image url is ", imgurl);
+    // Mint NFT
+    await mintImage(imgurl);
+    setMessage("Success!!");
+    setIsWaiting(false);
   };
 
   const createImage = async () => {
-    console.log("Creating image...");
+    setMessage("Creating image...");
+
     // You can replace this with different model API's
     const URL = `https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2`;
 
@@ -62,12 +76,11 @@ const App = () => {
     const base64data = Buffer.from(data).toString("base64");
     const img = `data:${type};base64,` + base64data; // <-- This is so we can render it on the page
     setImage(img);
-    console.log("Done");
     return data;
   };
 
   const uploadImage = async (imageData) => {
-    console.log("Uploading Image...");
+    setMessage("Uploading Image...");
 
     // Create a instance of NFTStorage
     const nftStorage = new NFTStorage({
@@ -85,6 +98,16 @@ const App = () => {
     const iurl = `https://ipfs.io/ipfs/${ipnft}/metadata.json`;
     setURL(iurl);
     return iurl;
+  };
+
+  const mintImage = async (tokenURI) => {
+    setMessage("Waiting for mint...");
+
+    const signer = await provider.getSigner();
+    const transaction = await nft
+      .connect(signer)
+      .mint(tokenURI, { value: ethers.parseEther("0.0001") });
+    await transaction.wait();
   };
 
   return (
@@ -111,12 +134,23 @@ const App = () => {
           <input type="submit" value="Create & Mint"></input>
         </form>
         <div className="image">
-          <img src={image} alt="AI-Generated Image" />
+          {!isWaiting && image ? (
+            <img src={image} alt="AI-Generated Image" />
+          ) : isWaiting ? (
+            <div className="image__placeholder">
+              <Spinner animation="grow" variant="secondary" />
+              <p>{message}</p>
+            </div>
+          ) : (
+            <></>
+          )}
         </div>
       </div>
-      <p>
-        View&nbsp;<a href={url}>Metadata</a>
-      </p>
+      {!isWaiting && url && (
+        <p>
+          View&nbsp;<a href={url}>Metadata</a>
+        </p>
+      )}
     </div>
   );
 };

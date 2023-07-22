@@ -7,7 +7,7 @@ const FRONT_END_ABI_FILE = "../client/src/constants/abi.json";
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const NAME = "AI Generated NFT";
   const SYMBOL = "AINFT";
-  const COST = ethers.parseEther("1");
+  const COST = ethers.parseEther("0.0001");
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
   console.log("---------------------------------------------------------");
